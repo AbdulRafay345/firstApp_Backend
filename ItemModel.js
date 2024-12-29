@@ -1,13 +1,12 @@
 const mongoose = require("mongoose");
 
-
 const EventSchema = new mongoose.Schema({
     title: String,
-    date: Date,
     description: String,
+    date: String,
     location: String,
     category: String,
-    visibility: { type: String, enum: ['public', 'private'], default: 'public' },
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-});
+    createdDate: { type: Date, default: Date.now } // Manually add createdDate
+}, { collection: "Item" });
+
 mongoose.model("Item", EventSchema);

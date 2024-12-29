@@ -9,6 +9,7 @@ const cors = require('cors');
 app.use(cors());
 
 const JWT_SECRET =  "hvdvay6ert72839289()aiyg8t87qt72393293883uhefiuh78ttq3ifi78272jdsds039[]]pou89ywe";
+
 mongoose.connect(mongoUrl).then(() => {
     console.log("database connected ")
 }).catch((e) => {
@@ -34,7 +35,6 @@ app.post('/register', async (req, res) => {
         console.log("User already exists");
         return res.send({ data: 'User already exists' });
     }
-
     const encryptedPassword = await bcrypt.hash(password, 10);
     try {
         await User.create({
@@ -52,15 +52,14 @@ app.post('/register', async (req, res) => {
 });
 
 
-
+// Login
 
 app.post("/login", async (req, res) => {
     console.log('Login route hit');
-    console.log('Request body:', req.body);  // Log the entire request body
+    console.log('Request body:', req.body);  
 
     const { email, password } = req.body;
 
-    // Log the email and password to check what the frontend is sending
     console.log('Received email:', email);
     console.log('Received password:', password);
 
@@ -71,7 +70,6 @@ app.post("/login", async (req, res) => {
         return res.send({ data: "User doesn't exist!!" });
     }
 
-    // Log the retrieved user
     console.log('User found:', oldUser);
 
     const passwordMatch = await bcrypt.compare(password, oldUser.password);
@@ -94,7 +92,7 @@ app.post("/login", async (req, res) => {
 
 
 
-
+// get user data
 
 app.post("/userdata", async (req, res) => {
     const { token } = req.body;
@@ -111,7 +109,7 @@ app.post("/userdata", async (req, res) => {
   });
 
 
-
+// update user
   app.post("/update-user", async (req, res) => {
     const { name, email, mobile, image, gender, profession } = req.body;
     console.log(req.body);
@@ -135,42 +133,60 @@ app.post("/userdata", async (req, res) => {
   });
 
 
-  app.post("/add-event", async (req, res) => {
-    console.log("Add Event Route Hit");
-    const { title, description, date, location, category } = req.body;
 
-    if (!title || !description || !date || !location || !category) {
-        return res.status(400).send({ status: "error", message: "All fields are required" });
+// add event
+app.post("/add-event", async (req, res) => {
+    const { title, description, date, location, category } = req.body;
+    const token = req.headers['authorization']?.split(' ')[1];  // Get the token from 'Bearer <token>'
+
+    if (!token) {
+        return res.status(400).send({ status: "error", message: "Token is required" });
     }
 
     try {
+        const decodedUser = jwt.verify(token, JWT_SECRET);  // Verify token
+        const userEmail = decodedUser.email;
+
+        const user = await User.findOne({ email: userEmail });
+        if (!user) {
+            return res.status(400).send({ status: "error", message: "User not found" });
+        }
+
         const newEvent = new Item({
             title,
             description,
             date,
             location,
             category,
+            userId: user._id,  
             createdDate: Date.now(),
         });
+
         await newEvent.save();
-        console.log("Event added:", newEvent);
         res.send({ status: "ok", message: "Event added successfully", event: newEvent });
+
     } catch (error) {
         console.error("Error adding event:", error);
         res.status(500).send({ status: "error", message: "Failed to add event" });
     }
 });
 
-app.get('/get-items', async (req, res) => {
+// Get events from the database
+app.get("/get-events", async (req, res) => {
     try {
-        // Fetch all items from the database using Mongoose's find method
-        const items = await Item.find(); // Assuming Item is a valid model
-        res.send({ status: 'ok', items }); // Return items in the response
+        const events = await Item.find();  // Fetch all events from the 'Item' model (which represents events)
+
+        if (events.length > 0) {
+            return res.send({ status: "ok", items: events });
+        } else {
+            return res.send({ status: "ok", message: "No events found" });
+        }
     } catch (error) {
-        console.error('Error fetching items:', error);
-        res.status(500).send({ status: 'error', message: 'Failed to fetch items' });
+        console.error("Error fetching events:", error);
+        return res.status(500).send({ status: "error", message: "Failed to fetch events" });
     }
 });
+
 
 
   
